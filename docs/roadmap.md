@@ -1,8 +1,8 @@
 | Fase | Apartado de la Documentación | Componente / Concepto a Implementar |
 | :--- | :--- | :--- |
 | 1. Fundaciones | Getting Started, Project Layout, CLI | Scaffolding (@loopback/cli), TypeScript strict, arranque de Application y configuración de entorno. |
-| 2. Fuentes de Datos | DataSources & Connectors | Conectores loopback-connector-sqlite3 y loopback-connector-mongodb, DataSource lifecycle y auto-migración (npm run migrate). |
-| 3. Modelado y Relaciones | Models, Repositories, Relations | Entidades vs. Value Objects, decoradores (@model, @property), DefaultCrudRepository, relaciones cruzadas (HasMany, BelongsTo, ReferencesMany) y resolución de relaciones entre diferentes bases de datos (SQLite ↔ Mongo). |
+| 2. Fuentes de Datos | DataSources & Connectors | Conectores loopback-connector-sqlite3, loopback-connector-mongodb y Redis (ioredis / KV), DataSource lifecycle y auto-migración (npm run migrate). |
+| 3. Modelado y Relaciones | Models, Repositories, Relations | Entidades relacionales (Driver, Vehicle en SQLite), ciclo de vida de Shift en Redis (máquina de estados PENDING->ONTHEWAY->FINISHED), resolución cruzada y persistencia histórica en MongoDB. |
 | 4. Capa HTTP & OpenAPI | Controllers, Routing, OpenAPI Spec | Controladores CRUD estándar, decoradores OpenAPI (@get, @post, @requestBody, @param.query.object), y endpoints RPC (p. ej. /rides/{id}/assign). |
 | 5. Núcleo e Inversión de Control | Context, Dependency Injection, Binding | Jerarquía de contextos (ApplicationContext vs RequestContext), Binding Keys, Binding Scopes (Singleton vs Transient vs Context-bound), y Providers personalizados. |
 | 6. Lógica de Dominio y Servicios | Services, Components, Observers | LifeCycleObserver para tareas de arranque/cierre, Servicios locales (cálculo de tarifas, asignación por distancia euclídea/Haversine) y Servicios proxy externos (OpenStreetMap / geocoding). |
