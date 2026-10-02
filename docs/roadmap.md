@@ -1,0 +1,11 @@
+| Fase | Apartado de la Documentación | Componente / Concepto a Implementar |
+| :--- | :--- | :--- |
+| 1. Fundaciones | Getting Started, Project Layout, CLI | Scaffolding (@loopback/cli), TypeScript strict, arranque de Application y configuración de entorno. |
+| 2. Fuentes de Datos | DataSources & Connectors | Conectores loopback-connector-sqlite3 y loopback-connector-mongodb, DataSource lifecycle y auto-migración (npm run migrate). |
+| 3. Modelado y Relaciones | Models, Repositories, Relations | Entidades vs. Value Objects, decoradores (@model, @property), DefaultCrudRepository, relaciones cruzadas (HasMany, BelongsTo, ReferencesMany) y resolución de relaciones entre diferentes bases de datos (SQLite ↔ Mongo). |
+| 4. Capa HTTP & OpenAPI | Controllers, Routing, OpenAPI Spec | Controladores CRUD estándar, decoradores OpenAPI (@get, @post, @requestBody, @param.query.object), y endpoints RPC (p. ej. /rides/{id}/assign). |
+| 5. Núcleo e Inversión de Control | Context, Dependency Injection, Binding | Jerarquía de contextos (ApplicationContext vs RequestContext), Binding Keys, Binding Scopes (Singleton vs Transient vs Context-bound), y Providers personalizados. |
+| 6. Lógica de Dominio y Servicios | Services, Components, Observers | LifeCycleObserver para tareas de arranque/cierre, Servicios locales (cálculo de tarifas, asignación por distancia euclídea/Haversine) y Servicios proxy externos (OpenStreetMap / geocoding). |
+| 7. Pipeline y Ciclo de Petición | Sequence, Middleware, Interceptors | Modificación de la DefaultSequence, creación de Interceptores globales y a nivel de método (auditoría, cálculo de latencia de endpoints, caching). |
+| 8. Seguridad y Acceso | Authentication, Authorization | Extensión @loopback/authentication y @loopback/authorization, autenticación JWT, roles (admin, dispatcher, driver) y autorizadores a nivel de recurso. |
+| 9. Testing y Calidad | Testing, Booter | Boot conventions (@loopback/boot), tests unitarios de servicios, tests de integración de repositorios y tests de aceptación de endpoints con @loopback/testlab. |
