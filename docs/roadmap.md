@@ -1,8 +1,8 @@
 | Fase | Apartado de la Documentación | Componente / Concepto a Implementar |
 | :--- | :--- | :--- |
 | 1. Fundaciones | Getting Started, Project Layout, CLI | Scaffolding (@loopback/cli), TypeScript strict, arranque de Application y configuración de entorno. |
-| 2. Fuentes de Datos | DataSources & Connectors | Conectores loopback-connector-sqlite3, loopback-connector-mongodb y Redis (ioredis / KV), DataSource lifecycle y auto-migración (npm run migrate). |
-| 3. Modelado y Relaciones | Models, Repositories, Relations | Entidades relacionales (Driver, Vehicle en SQLite), ciclo de vida de Shift en Redis (máquina de estados PENDING->ONTHEWAY->FINISHED), resolución cruzada y persistencia histórica en MongoDB. |
+| 2. Fuentes de Datos & Docker | DataSources, Connectors & Docker Compose | docker-compose.yml (PostgreSQL, Redis, MongoDB), conectores memory (User en db.json), loopback-connector-postgresql (Driver/Vehicle), loopback-connector-kv-redis (Shift activo) y loopback-connector-mongodb (histórico). DataSource lifecycle y auto-migración (npm run migrate). |
+| 3. Modelado y Relaciones | Models, Repositories, Relations | Modelos User, Driver, Vehicle, Shift. Repositorios DefaultCrudRepository (Postgres & Memory), KV-Repository (Redis), DefaultCrudRepository (Mongo). Relaciones entre activos y ciclo de vida de Shift. |
 | 4. Capa HTTP & OpenAPI | Controllers, Routing, OpenAPI Spec | Controladores CRUD estándar, decoradores OpenAPI (@get, @post, @requestBody, @param.query.object), y endpoints RPC (p. ej. /rides/{id}/assign). |
 | 5. Núcleo e Inversión de Control | Context, Dependency Injection, Binding | Jerarquía de contextos (ApplicationContext vs RequestContext), Binding Keys, Binding Scopes (Singleton vs Transient vs Context-bound), y Providers personalizados. |
 | 6. Lógica de Dominio y Servicios | Services, Components, Observers | LifeCycleObserver para tareas de arranque/cierre, Servicios locales (cálculo de tarifas, asignación por distancia euclídea/Haversine) y Servicios proxy externos (OpenStreetMap / geocoding). |

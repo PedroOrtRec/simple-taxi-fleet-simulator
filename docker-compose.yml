@@ -1,0 +1,41 @@
+services:
+  # Base de datos relacional para Driver y Vehicle
+  postgres:
+    image: postgres:16-alpine
+    container_name: taxi-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_DB: taxifleet
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Base de datos en memoria para Shifts activos (tiempo real y TTL)
+  redis:
+    image: redis:7-alpine
+    container_name: taxi-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+
+  # Base de datos documental para el histórico inmutable de Shifts
+  mongodb:
+    image: mongo:7.0
+    container_name: taxi-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: taxifleet_history
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  postgres_data:
+  redis_data:
+  mongo_data:

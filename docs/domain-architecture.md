@@ -21,15 +21,16 @@ flowchart TD
     end
 
     subgraph Almacenamiento Políglota
-        SQLITE[("SQLite: Operadores, Drivers y Vehicles")]
-        REDIS[("Redis: Shifts Activos (PENDING / ONTHEWAY)")]
-        MONGO[("MongoDB: Histórico de Shifts (FINISHED)")]
+        MEM[("In-Memory + Archivo: Operadores (db.json)")]
+        POSTGRES[("PostgreSQL (Docker): Drivers y Vehicles")]
+        REDIS[("Redis (Docker): Shifts Activos (PENDING / ONTHEWAY)")]
+        MONGO[("MongoDB (Docker): Histórico de Shifts (FINISHED)")]
     end
 
     OP -->|Credenciales / Token JWT| AUTH
-    AUTH -->|Valida Operadores| SQLITE
+    AUTH -->|Valida Operadores| MEM
     OP -->|Gestiona flota| CTRL_ASSETS
-    CTRL_ASSETS -->|CRUD & Relaciones| SQLITE
+    CTRL_ASSETS -->|CRUD & Relaciones SQL| POSTGRES
     OP -->|Crea / Despacha / Transiciona| CTRL_SHIFT
     CTRL_SHIFT -->|Lectura / Escritura rápida| REDIS
     CTRL_SHIFT -->|Archiva al completar| MONGO
@@ -37,84 +38,83 @@ flowchart TD
 
 ---
 
-## 2. Autenticación y Usuarios (Operadores de Flota)
+## 2. Autenticación y Usuarios (Operadores de Flota) — *In-Memory (`data/db.json`)*
 
 * **Rol**: Operador de flota (*Dispatcher*).
 * **Mecanismo**: Autenticación basada en tokens JWT (`@loopback/authentication`, `@loopback/authentication-jwt`).
 * **Flujo**:
   1. El operador envía credenciales (`email` / `password`).
-  2. El sistema valida el hash (bcrypt) contra la base de datos relacional.
+  2. El sistema valida el hash de contraseña (bcrypt) contra el repositorio de usuarios.
   3. Se emite un token JWT que el operador debe incluir en la cabecera `Authorization: Bearer <token>` para consumir los endpoints protegidos.
-* **Persistencia**: **SQLite** (tabla `User` / `UserCredentials`).
+* **Persistencia**: **In-memory db con persistencia local a archivo** (`./data/db.json`).
+  * Conector: `memory` (oficial de StrongLoop / LoopBack 4).
+  * Ideal para almacenar operadores y credenciales locales de forma aislada, portable y sin requerir infraestructura adicional.
 
 ---
 
-## 3. Activos del Negocio: Drivers y Vehicles (SQLite)
+## 3. Activos del Negocio: Drivers y Vehicles — *PostgreSQL (Docker)*
 
-### ¿Por qué SQLite para Drivers y Vehicles?
-1. **Integridad Referencial y Relacional**: Existe una relación directa entre conductor y vehículo (1:1 o 1:N según asignación de turnos). Las bases de datos relacionales garantizan claves foráneas, restricciones de unicidad (p. ej. matrícula o número de licencia únicos) y transacciones ACID.
-2. **Bajo costo operacional en local**: No requiere un contenedor ni servicio externo para desarrollo o simulación.
-3. **Modelado en LoopBack 4**: Permite utilizar `DefaultCrudRepository`, decoradores `@hasOne`, `@belongsTo` y migraciones automáticas (`npm run migrate`).
+### ¿Por qué PostgreSQL para Drivers y Vehicles?
+1. **Motor Relacional Empresarial**: Implementa integridad referencial estricta, claves foráneas, índices de unicidad (`plate`, `licenseNumber`), transacciones ACID y tipos numéricos de alta precisión para geolocalización.
+2. **Soporte Oficial LoopBack 4**: Utiliza `loopback-connector-postgresql`, el conector relacional más maduro y soportado activamente por StrongLoop.
+3. **Práctica Profesional**: Permite trabajar con esquemas SQL estándar y migraciones automáticas (`npm run migrate`).
+4. **Infraestructura Contenedorizada**: Se ejecuta en un contenedor Docker orquestado con `docker-compose.yml`.
 
 ### Definición de Entidades
 
 #### `Driver`
-* `id`: Identificador único (UUID o autoincremental).
-* `name`: Nombre completo del conductor.
-* `assignedVehicleId`: Referencia foránea opcional a `Vehicle`.
+* `id`: Identificador numérico autoincremental (`id: true, generated: true`).
+* `name`: Nombre completo del conductor (`string, required: true`).
+* `assignedVehicleId`: Clave foránea al vehículo asignado (`number, optional`).
 * `status`: Estado operativo (`AVAILABLE`, `ON_DUTY`, `OFF_DUTY`).
 
 #### `Vehicle`
-* `id`: Identificador único.
-* `plate`: Matrícula del vehículo (única).
-* `licenseNumber`: Número de licencia de taxi (única).
-* `assignedDriverId`: Referencia foránea al conductor actual.
-* `position`: Coordenadas geográficas (`latitude`, `longitude`).
-* `status`: Estado del vehículo (`AVAILABLE`, `IN_SERVICE`, `MAINTENANCE`).
+* `id`: Identificador numérico autoincremental.
+* `plate`: Matrícula del vehículo (`string, required: true, unique`).
+* `licenseNumber`: Número de licencia del taxi (`string, required: true, unique`).
+* `assignedDriverId`: Clave foránea al conductor asignado (`number, optional`).
+* `latitude` / `longitude`: Coordenadas geográficas (`number, optional`).
+* `status`: Estado operativo (`AVAILABLE`, `IN_SERVICE`, `MAINTENANCE`).
 
 ---
 
-## 4. Entidad `Shift` en Tiempo Real (Redis)
+## 4. Entidad `Shift` en Tiempo Real — *Redis (Docker)*
 
 ### ¿Por qué Redis para Shifts Activos?
-1. **Volatilidad y Tiempo Real**: Un trayecto/servicio activo experimenta cambios rápidos de estado (`PENDING` ➔ `ONTHEWAY` ➔ `FINISHED`) y consultas concurrentes de alta frecuencia con latencias sub-milisegundo.
-2. **TTL y Expiración**: Permite configurar tiempos de expiración automáticos si un servicio en estado `PENDING` no es aceptado por ningún conductor tras un umbral de tiempo.
-3. **Separación de responsabilidades (CQRS / Fast Path)**: Mantiene la base de datos histórica limpia de estados intermedios y cancelaciones efímeras.
-4. **Valor educativo**: Permite aprender a configurar un `KeyValueDataSource` o cliente Redis en LoopBack 4 y orquestar transiciones entre diferentes motores de almacenamiento.
+1. **Volatilidad y Tiempo Real**: Los trayectos activos cambian velozmente (`PENDING` ➔ `ONTHEWAY` ➔ `FINISHED`) con lecturas y escrituras concurrentes sub-milisegundo.
+2. **Expiración y TTL**: Permite descartar automáticamente servicios `PENDING` si ningún conductor los acepta tras cierto tiempo límite.
+3. **Conector Oficial**: `loopback-connector-kv-redis` o cliente `ioredis` inyectado en el contexto de LoopBack.
 
 ### Propiedades de `Shift`
-* `id`: Identificador único del servicio.
-* `clientName`: Nombre del cliente que solicita el servicio.
-* `from`: Ubicación de origen.
+* `id`: Identificador único (`number` o `string` UUID).
+* `clientName`: Nombre del cliente (`string, required: true`).
+* `from`: Ubicación de origen (`string, required: true`).
 * `to` *(opcional al crear)*: Destino del servicio.
-* `date`: Fecha y hora de solicitud.
-* `status`: Estado actual:
-  * `PENDING`: Servicio solicitado pero aún no en curso hacia el destino.
-  * `ONTHEWAY`: Conductor en camino con el cliente a bordo.
-  * `FINISHED`: Servicio finalizado.
-* `acceptedBy`: Identificador del conductor o vehículo que tomó el servicio.
+* `date`: Fecha y hora de solicitud (`date, defaultFn: 'now'`).
+* `status`: Estado del trayecto (`PENDING`, `ONTHEWAY`, `FINISHED`).
+* `acceptedBy`: ID del conductor/vehículo que tomó el servicio (`number, optional`).
 
 ### Reglas de Negocio y Transiciones de Estado
-* **Creación (`PENDING`)**: Puede omitirse el valor `to` (por ejemplo, el cliente sube y no ha indicado destino final).
-* **Transición `PENDING` ➔ `ONTHEWAY`**: **Validación obligatoria**. Si el campo `to` no existía, el payload de la transición debe incluirlo obligatoriamente; de lo contrario, la API devolverá un error de validación `422 Unprocessable Entity` o `400 Bad Request`.
+* **Creación (`PENDING`)**: Puede omitirse el valor `to`.
+* **Transición `PENDING` ➔ `ONTHEWAY`**: **Validación obligatoria**. Si el campo `to` no existía, el payload de transición debe incluirlo obligatoriamente (de lo contrario, error `422 Unprocessable Entity`).
 * **Transición `ONTHEWAY` ➔ `FINISHED`**: Dispara la persistencia en MongoDB y la eliminación/archivo del registro activo en Redis.
 
 ---
 
-## 5. Histórico de Shifts (MongoDB)
+## 5. Histórico de Shifts — *MongoDB (Docker)*
 
 ### ¿Por qué MongoDB para el Histórico?
-1. **Documentos Autocontenidos (Snapshots Históricos)**: En analítica y auditoría, el registro de un servicio completado debe conservar los datos exactos del momento en que ocurrió (datos del cliente, conductor, matrícula del vehículo en ese instante, ruta y tiempos). En Mongo se desnormaliza en un documento único inmutable sin riesgo de que futuras modificaciones en SQLite corrompan el histórico.
-2. **Consultas de Agregación**: Excelente para métricas de flota: tiempos medios de servicio, volumen de trayectos por conductor, mapas de calor por zonas.
-3. **Escalabilidad de Lectura/Escritura Masiva**: Diseñado para albergar millones de registros históricos sin degradar el rendimiento relacional de SQLite.
+1. **Snapshots Históricos Inmutables**: Cuando un servicio termina, el registro en MongoDB consolida un documento JSON con la información exacta del servicio (datos del cliente, conductor, matrícula del vehículo en ese instante, tiempos y ruta). No se ve afectado si en el futuro se modifican registros en PostgreSQL.
+2. **Consultas de Agregación**: Excelente para analítica de negocio (duración media de viajes, cálculo de volumen por zonas).
+3. **Conector Oficial**: `loopback-connector-mongodb` (soportado por StrongLoop).
 
 ---
 
-## 6. Resumen de Persistencia Políglota
+## 6. Resumen de Persistencia Políglota e Infraestructura
 
-| Componente | Motor de Datos | Conector / Herramienta | Rol Arquitectónico |
-| :--- | :--- | :--- | :--- |
-| **Operadores (Users)** | SQLite | `loopback-connector-sqlite3` | Credenciales y control de acceso seguro |
-| **Activos (Drivers & Vehicles)** | SQLite | `loopback-connector-sqlite3` | Datos maestros con integridad referencial |
-| **Shifts Activos** | Redis | `ioredis` / `@loopback/repository` KV | Estado efímero de alta velocidad y TTL |
-| **Histórico de Shifts** | MongoDB | `loopback-connector-mongodb` | Archivo inmutable, agregaciones y auditoría |
+| Componente | Motor de Datos | Conector LoopBack 4 | Despliegue | Rol Arquitectónico |
+| :--- | :--- | :--- | :--- | :--- |
+| **Operadores (`User`)** | In-Memory con archivo | `memory` (`./data/db.json`) | Local embebido | Credenciales y autenticación JWT |
+| **Activos (`Driver`, `Vehicle`)** | PostgreSQL | `loopback-connector-postgresql` | Contenedor Docker | Datos maestros relacionales con ACID |
+| **Shifts Activos** | Redis | `loopback-connector-kv-redis` / `ioredis` | Contenedor Docker | Estado efímero de alta velocidad y TTL |
+| **Histórico de Shifts** | MongoDB | `loopback-connector-mongodb` | Contenedor Docker | Archivo inmutable, agregaciones y auditoría |

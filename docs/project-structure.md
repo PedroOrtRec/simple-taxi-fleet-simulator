@@ -56,8 +56,11 @@ Este documento detalla la estructura y el propósito de cada uno de los archivos
 * **[`docs/roadmap.md`](roadmap.md)**  
   Hoja de ruta pedagógica en 9 fases para el aprendizaje e implementación incremental del proyecto (Fundaciones, DataSources, Modelado, Capa HTTP, Inversión de Control, Lógica de Negocio, Pipeline/Sequence, Seguridad y Testing).
 
-* **[`docs/project-structure.md`](project-structure.md)**  
-  Este archivo. Guía explicativa exhaustiva del rol de cada fichero del repositorio dentro del framework LoopBack 4.
+* **[`docs/domain-architecture.md`](domain-architecture.md)**  
+  Definición técnica del dominio y persistencia políglota: modelo de entidades (`User`, `Driver`, `Vehicle`, `Shift`), ciclo de vida y orquestación con Docker Compose.
+
+* **[`docs/pnpm-guidelines.md`](pnpm-guidelines.md)**  
+  Guía de buenas prácticas y resolución de incidencias al trabajar con `pnpm` en LoopBack 4 (instalación de `@loopback/cli`, `@types/mocha` y conectores).
 
 ---
 
