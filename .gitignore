@@ -67,7 +67,8 @@ typings/
 \#*#
 
 # Local persistence data and docker volumes
-/data/
+/data/*
+!/data/.gitkeep
 docker-volumes/
 postgres_data/
 mongo_data/

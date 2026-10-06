@@ -6,7 +6,10 @@ export async function migrate(args: string[]) {
 
   const app = new SimpleTaxiFleetSimulatorApplication();
   await app.boot();
-  await app.migrateSchema({existingSchema});
+  await app.migrateSchema({
+    existingSchema,
+    models: ['Driver', 'Vehicle'],
+  });
 
   // Connectors usually keep a pool of opened connections,
   // this keeps the process running even after all work is done.

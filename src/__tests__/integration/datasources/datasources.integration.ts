@@ -1,3 +1,4 @@
+import {expect} from '@loopback/testlab';
 import {
   DbDataSource,
   PostgresDataSource,
@@ -26,7 +27,8 @@ describe('DataSources Integreation Tests', () => {
   });
 
   it('should connect to in-memory DbDataSource', async () => {
-    await dbDs.ping();
+    await dbDs.connect();
+    expect(dbDs.connected).to.be.true();
   });
 
   it('should connect to PostgresDataSource in Docker', async () => {

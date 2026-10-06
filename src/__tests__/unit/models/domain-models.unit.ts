@@ -1,5 +1,5 @@
 import {expect} from '@loopback/testlab';
-import {Driver, Vehicle, Shift, User} from '../../../models';
+import {Driver, Vehicle, Shift, User, ShiftHistory} from '../../../models';
 
 describe('Domain Models Unit Tests', () => {
   it('creates a Driver instance with default AVAILABLE status', () => {
@@ -39,5 +39,28 @@ describe('Domain Models Unit Tests', () => {
     });
     expect(user.email).to.equal('user1@email.com');
     expect(User.definition.properties.role.default).to.equal('OPERATOR');
+  });
+
+  it('creates a ShiftHistory with completed audit details', () => {
+    const completedAt = new Date().toISOString();
+    const history = new ShiftHistory({
+      clientName: 'Alice',
+      from: 'Puerta del Sol',
+      to: 'Aeropuerto T4',
+      driverName: 'John Doe',
+      vehiclePlate: '1234-XYZ',
+      fare: 35.5,
+      completedAt,
+    });
+
+    expect(history.clientName).to.equal('Alice');
+    expect(history.to).to.equal('Aeropuerto T4');
+    expect(history.driverName).to.equal('John Doe');
+    expect(history.vehiclePlate).to.equal('1234-XYZ');
+    expect(history.fare).to.equal(35.5);
+    expect(history.completedAt).to.equal(completedAt);
+    expect(ShiftHistory.definition.properties.status.default).to.equal(
+      'FINISHED',
+    );
   });
 });
