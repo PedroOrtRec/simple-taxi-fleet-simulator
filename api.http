@@ -1,0 +1,170 @@
+# =============================================================================
+# Simple Taxi Fleet Simulator - API Test Suite (Kulala.nvim)
+# =============================================================================
+# Atajos útiles en Neovim con kulala.nvim:
+#   <leader>Rr  -> Ejecutar la petición bajo el cursor
+#   <leader>Ra  -> Ejecutar todas las peticiones secuencialmente
+#   <leader>Rt  -> Alternar vista entre cuerpo (body) y cabeceras
+#   <leader>Rc  -> Copiar la petición actual como comando cURL
+#   <leader>Rn  -> Saltar a la siguiente petición
+#   <leader>Rp  -> Saltar a la petición anterior
+# =============================================================================
+
+@baseUrl = http://localhost:3000
+
+### ---------------------------------------------------------------------------
+### 0. Healthcheck & Ping
+### ---------------------------------------------------------------------------
+
+# @name ping
+GET {{baseUrl}}/ping
+Accept: application/json
+
+### ---------------------------------------------------------------------------
+### 1. Gestión de Conductores (PostgreSQL)
+### ---------------------------------------------------------------------------
+
+### 1.1 Crear Conductor (Carlos Sainz)
+# @name createDriver1
+POST {{baseUrl}}/drivers
+Content-Type: application/json
+
+{
+  "name": "Carlos Sainz",
+  "status": "AVAILABLE"
+}
+
+### 1.2 Crear Segundo Conductor (Fernando Alonso)
+# @name createDriver2
+POST {{baseUrl}}/drivers
+Content-Type: application/json
+
+{
+  "name": "Fernando Alonso",
+  "status": "AVAILABLE"
+}
+
+### 1.3 Listar Todos los Conductores
+# @name getDrivers
+GET {{baseUrl}}/drivers
+Accept: application/json
+
+### 1.4 Consultar Conductor por ID
+GET {{baseUrl}}/drivers/{{createDriver1.response.body.id}}
+Accept: application/json
+
+### ---------------------------------------------------------------------------
+### 2. Gestión de Vehículos (PostgreSQL)
+### ---------------------------------------------------------------------------
+
+### 2.1 Crear Vehículo Taxi
+# @name createVehicle
+POST {{baseUrl}}/vehicles
+Content-Type: application/json
+
+{
+  "plate": "5555-MAD",
+  "licenseNumber": "TX-055",
+  "status": "AVAILABLE",
+  "latitude": 404168,
+  "longitude": -37038
+}
+
+### 2.2 Listar Vehículos
+# @name getVehicles
+GET {{baseUrl}}/vehicles
+Accept: application/json
+
+### 2.3 Asignar Vehículo al Conductor 1
+PATCH {{baseUrl}}/drivers/{{createDriver1.response.body.id}}
+Content-Type: application/json
+
+{
+  "assignedVehicleId": {{createVehicle.response.body.id}}
+}
+
+### ---------------------------------------------------------------------------
+### 3. Ciclo de Vida del Turno / Servicio (Redis + Postgres + MongoDB)
+### ---------------------------------------------------------------------------
+
+### 3.1 Solicitar Turno en Tiempo Real (Se guarda en Redis como PENDING)
+# @name createShift
+POST {{baseUrl}}/shifts
+Content-Type: application/json
+
+{
+  "clientName": "Pedro Ortega",
+  "from": "Puerta del Sol, Madrid",
+  "to": "Aeropuerto Adolfo Suárez Barajas T4"
+}
+
+### 3.2 Consultar Estado Activo del Turno en Redis (Debe ser PENDING)
+GET {{baseUrl}}/shifts/{{createShift.response.body.id}}
+Accept: application/json
+
+### 3.3 Conductor Acepta el Turno (Pasa a ONTHEWAY, flota a BUSY en Postgres)
+# @name acceptShift
+POST {{baseUrl}}/shifts/{{createShift.response.body.id}}/accept
+Content-Type: application/json
+
+{
+  "driverId": {{createDriver1.response.body.id}}
+}
+
+### 3.4 Verificar en Redis que el Turno ahora está ONTHEWAY
+GET {{baseUrl}}/shifts/{{createShift.response.body.id}}
+Accept: application/json
+
+### 3.5 Verificar en PostgreSQL que el Conductor y Vehículo están BUSY
+GET {{baseUrl}}/drivers/{{createDriver1.response.body.id}}
+Accept: application/json
+
+### 3.6 Completar el Turno (Mueve a MongoDB, libera flota a AVAILABLE y borra de Redis)
+# @name completeShift
+POST {{baseUrl}}/shifts/{{createShift.response.body.id}}/complete
+Content-Type: application/json
+
+{
+  "fare": 38.50
+}
+
+### 3.7 Comprobar que el Turno YA NO EXISTE en Redis (Debe devolver 404 Not Found)
+GET {{baseUrl}}/shifts/{{createShift.response.body.id}}
+Accept: application/json
+
+### 3.8 Comprobar en PostgreSQL que el Conductor vuelve a estar AVAILABLE
+GET {{baseUrl}}/drivers/{{createDriver1.response.body.id}}
+Accept: application/json
+
+### ---------------------------------------------------------------------------
+### 4. Histórico de Turnos Archivados (MongoDB)
+### ---------------------------------------------------------------------------
+
+### 4.1 Listar todos los Turnos Archivados en MongoDB
+# @name getShiftHistory
+GET {{baseUrl}}/shift-histories
+Accept: application/json
+
+### 4.2 Filtrar Histórico por Conductor
+GET {{baseUrl}}/shift-histories?filter=%7B%22where%22%3A%7B%22driverName%22%3A%22Carlos%20Sainz%22%7D%7D
+Accept: application/json
+
+### ---------------------------------------------------------------------------
+### 5. Operadores / Usuarios (In-Memory DB)
+### ---------------------------------------------------------------------------
+
+### 5.1 Crear Operador
+# @name createUser
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "name": "Admin Central",
+  "email": "central@taxifleet.com",
+  "password": "supersecretpassword123",
+  "role": "ADMIN"
+}
+
+### 5.2 Listar Operadores
+GET {{baseUrl}}/users
+Accept: application/json

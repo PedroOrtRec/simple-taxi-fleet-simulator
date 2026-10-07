@@ -27,6 +27,8 @@
     "test:dev": "lb-mocha --allow-console-logs dist/__tests__/**/*.js && npm run posttest",
     "docker:build": "docker build -t simple-taxi-fleet-simulator .",
     "docker:run": "docker run -p 3000:3000 -d simple-taxi-fleet-simulator",
+    "test:manual": "bash ./scripts/api-fzf.sh",
+    "workspace": "zellij --layout ./scripts/workspace.kdl",
     "premigrate": "npm run build",
     "migrate": "node ./dist/migrate",
     "preopenapi-spec": "npm run build",

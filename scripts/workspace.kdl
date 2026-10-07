@@ -1,0 +1,37 @@
+layout {
+    default_tab_template {
+        pane size=1 borderless=true {
+            plugin location="zellij:tab-bar"
+        }
+        children
+        pane size=2 borderless=true {
+            plugin location="zellij:status-bar"
+        }
+    }
+
+    tab name="Dashboard & Testing" focus=true {
+        pane split_direction="vertical" {
+            // Panel Izquierdo: Servidor y Base de Datos Relacional
+            pane split_direction="horizontal" size="50%" {
+                pane name="🚀 Servidor (LoopBack 4)" command="pnpm" {
+                    args "start"
+                }
+                pane name="🐬 Base de Datos (lazysql)" command="lazysql"
+            }
+
+            // Panel Derecho: Peticiones HTTPie interactivas y Monitoreo Docker
+            pane split_direction="horizontal" size="50%" {
+                pane name="⚡ API Explorer (FZF & HTTPie)" command="bash" focus=true {
+                    args "scripts/api-fzf.sh"
+                }
+                pane name="🐳 Contenedores (lazydocker)" command="lazydocker"
+            }
+        }
+    }
+
+    tab name="Neovim (Kulala.nvim)" {
+        pane name="📝 Editor REST Client" command="nvim" {
+            args "api.http"
+        }
+    }
+}
