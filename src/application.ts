@@ -9,6 +9,8 @@ import {RestApplication} from '@loopback/rest';
 import {ServiceMixin} from '@loopback/service-proxy';
 import path from 'path';
 import {MySequence} from './sequence';
+import {GeocoderBindings} from './keys';
+import {GeocoderServiceProvider} from './services';
 
 export {ApplicationConfig};
 
@@ -29,6 +31,11 @@ export class SimpleTaxiFleetSimulatorApplication extends BootMixin(
       path: '/explorer',
     });
     this.component(RestExplorerComponent);
+
+    // Bind Geocoder service using IoC BindingKey
+    this.bind(GeocoderBindings.GEOCODER_SERVICE).toProvider(
+      GeocoderServiceProvider,
+    );
 
     this.projectRoot = __dirname;
     // Customize @loopback/boot Booter Conventions here
