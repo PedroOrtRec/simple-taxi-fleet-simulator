@@ -9,8 +9,8 @@ import {RestApplication} from '@loopback/rest';
 import {ServiceMixin} from '@loopback/service-proxy';
 import path from 'path';
 import {MySequence} from './sequence';
-import {GeocoderBindings} from './keys';
-import {GeocoderServiceProvider} from './services';
+import {GeocoderBindings, FareCalculatorBindings} from './keys';
+import {GeocoderServiceProvider, FareCalculatorService} from './services';
 
 export {ApplicationConfig};
 
@@ -35,6 +35,11 @@ export class SimpleTaxiFleetSimulatorApplication extends BootMixin(
     // Bind Geocoder service using IoC BindingKey
     this.bind(GeocoderBindings.GEOCODER_SERVICE).toProvider(
       GeocoderServiceProvider,
+    );
+
+    // Bind FareCalculator service using IoC BindingKey
+    this.bind(FareCalculatorBindings.FARE_SERVICE).toClass(
+      FareCalculatorService,
     );
 
     this.projectRoot = __dirname;

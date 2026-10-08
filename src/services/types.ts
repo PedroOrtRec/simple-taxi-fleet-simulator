@@ -22,15 +22,6 @@ export interface ClosestVehicleResult {
   estimatedArrivalMinutes: number;
 }
 
-export interface FareCalculatorService {
-  calculateDistance(origin: GeoPoint, destination: GeoPoint): number;
-  estimateFare(distanceKm: number): number;
-  findClosestVehicle(
-    pickup: GeoPoint,
-    availableVehicles: Vehicle[],
-  ): ClosestVehicleResult | null;
-}
-
 export interface CreateShiftRequest {
   clientName: string;
   from: string;
