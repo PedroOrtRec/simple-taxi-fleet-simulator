@@ -4,19 +4,22 @@ import {
   PostgresDataSource,
   RedisDataSource,
   MongodbDataSource,
-} from '../../../datasources/';
+  GeocoderDataSource,
+} from '../../../datasources';
 
-describe('DataSources Integreation Tests', () => {
+describe('DataSources Integration Tests', () => {
   let dbDs: DbDataSource;
   let pgDs: PostgresDataSource;
   let redisDs: RedisDataSource;
   let mongoDs: MongodbDataSource;
+  let geocoderDs: GeocoderDataSource;
 
   before('DataSources Initialization', async () => {
     dbDs = new DbDataSource();
     pgDs = new PostgresDataSource();
     redisDs = new RedisDataSource();
     mongoDs = new MongodbDataSource();
+    geocoderDs = new GeocoderDataSource();
   });
 
   after('DataSources Disconnection', async () => {
@@ -24,6 +27,7 @@ describe('DataSources Integreation Tests', () => {
     await pgDs.stop();
     await redisDs.stop();
     await mongoDs.stop();
+    await geocoderDs.stop();
   });
 
   it('should connect to in-memory DbDataSource', async () => {
@@ -41,5 +45,10 @@ describe('DataSources Integreation Tests', () => {
 
   it('should connect to MongodbDataSource in Docker', async () => {
     await mongoDs.ping();
+  });
+
+  it('should initialize GeocoderDataSource with rest connector', async () => {
+    expect(geocoderDs.name).to.equal('geocoder');
+    expect(geocoderDs.settings.connector).to.equal('rest');
   });
 });
