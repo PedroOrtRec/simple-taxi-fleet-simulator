@@ -19,6 +19,7 @@ import {
   FareCalculatorService,
   ShiftService,
 } from './services';
+import {DatabaseSeedObserver} from './observers';
 
 export {ApplicationConfig};
 
@@ -53,6 +54,9 @@ export class SimpleTaxiFleetSimulatorApplication extends BootMixin(
     // Bind Shift service using IoC BindingKey
     this.bind(ShiftServiceBindings.SHIFT_SERVICE).toClass(ShiftService);
 
+    // Register database seeding and fleet lifecycle observer
+    this.lifeCycleObserver(DatabaseSeedObserver);
+
     this.projectRoot = __dirname;
     // Customize @loopback/boot Booter Conventions here
     this.bootOptions = {
@@ -60,6 +64,11 @@ export class SimpleTaxiFleetSimulatorApplication extends BootMixin(
         // Customize ControllerBooter Conventions here
         dirs: ['controllers'],
         extensions: ['.controller.js'],
+        nested: true,
+      },
+      observers: {
+        dirs: ['observers'],
+        extensions: ['.observer.js'],
         nested: true,
       },
     };
