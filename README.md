@@ -67,6 +67,14 @@ npm run lint:fix
 npm test
 ```
 
+## Documentación del Proyecto
+
+- 📋 [Documento de Traspaso Técnico (Handoff)](./handoff.md): Estado actual, análisis de brechas frente al tutorial oficial de LoopBack 4 y roadmap futuro.
+- 🗺️ [Hoja de Ruta Pedagógica (Roadmap)](./docs/roadmap.md): Fases de desarrollo y objetivos pedagógicos.
+- 🏛️ [Arquitectura de Dominio](./docs/domain-architecture.md): Modelado políglota y flujo de negocio.
+- 📁 [Estructura del Proyecto](./docs/project-structure.md): Organización de directorios y componentes.
+- 📦 [Guía de PNPM](./docs/pnpm-guidelines.md): Reglas de gestión de paquetes.
+
 ## What's next
 
 Please check out [LoopBack 4 documentation](https://loopback.io/doc/en/lb4/) to
