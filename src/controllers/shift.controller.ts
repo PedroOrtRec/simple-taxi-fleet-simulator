@@ -1,4 +1,4 @@
-import {repository} from '@loopback/repository';
+import {inject} from '@loopback/core';
 import {
   post,
   param,
@@ -6,26 +6,15 @@ import {
   requestBody,
   response,
   getModelSchemaRef,
-  HttpErrors,
 } from '@loopback/rest';
-import {Shift, ShiftHistory} from '../models';
-import {
-  ShiftRepository,
-  DriverRepository,
-  VehicleRepository,
-  ShiftHistoryRepository,
-} from '../repositories';
+import {Shift, ShiftHistory, Vehicle} from '../models';
+import {ShiftServiceBindings} from '../keys';
+import {ShiftService, ClosestVehicleResult} from '../services';
 
 export class ShiftController {
   constructor(
-    @repository(ShiftRepository)
-    public shiftRepository: ShiftRepository,
-    @repository(DriverRepository)
-    public driverRepository: DriverRepository,
-    @repository(VehicleRepository)
-    public vehicleRepository: VehicleRepository,
-    @repository(ShiftHistoryRepository)
-    public shiftHistoryRepository: ShiftHistoryRepository,
+    @inject(ShiftServiceBindings.SHIFT_SERVICE)
+    public shiftService: ShiftService,
   ) {}
 
   @post('/shifts')
@@ -46,16 +35,7 @@ export class ShiftController {
     })
     shiftData: Omit<Shift, 'id' | 'status' | 'acceptedBy' | 'date'>,
   ): Promise<Shift> {
-    const id = Date.now();
-    const shift = new Shift({
-      ...shiftData,
-      id,
-      status: 'PENDING',
-      date: new Date().toISOString(),
-    });
-
-    await this.shiftRepository.set(`shift:${id}`, shift);
-    return shift;
+    return this.shiftService.request(shiftData);
   }
 
   @get('/shifts/{id}')
@@ -64,11 +44,7 @@ export class ShiftController {
     content: {'application/json': {schema: getModelSchemaRef(Shift)}},
   })
   async findById(@param.path.number('id') id: number): Promise<Shift> {
-    const shift = await this.shiftRepository.get(`shift:${id}`);
-    if (!shift) {
-      throw new HttpErrors.NotFound(`Shift with id ${id} not found.`);
-    }
-    return shift;
+    return this.shiftService.getById(id);
   }
 
   @post('/shifts/{id}/accept')
@@ -93,34 +69,7 @@ export class ShiftController {
     })
     body: {driverId: number},
   ): Promise<Shift> {
-    const shift = await this.shiftRepository.get(`shift:${id}`);
-    if (!shift) {
-      throw new HttpErrors.NotFound(`Shift with id ${id} not found.`);
-    }
-    if (shift.status !== 'PENDING') {
-      throw new HttpErrors.BadRequest(
-        `Shift ${id} is not pending (current status: ${shift.status}).`,
-      );
-    }
-
-    const driver = await this.driverRepository.findById(body.driverId);
-    if (driver.status !== 'AVAILABLE') {
-      throw new HttpErrors.BadRequest(
-        `Driver ${body.driverId} is not available (status: ${driver.status}).`,
-      );
-    }
-
-    await this.driverRepository.updateById(driver.id, {status: 'BUSY'});
-    if (driver.assignedVehicleId) {
-      await this.vehicleRepository.updateById(driver.assignedVehicleId, {
-        status: 'BUSY',
-      });
-    }
-
-    shift.status = 'ONTHEWAY';
-    shift.acceptedBy = driver.id;
-    await this.shiftRepository.set(`shift:${id}`, shift);
-    return shift;
+    return this.shiftService.accept(id, body.driverId);
   }
 
   @post('/shifts/{id}/complete')
@@ -138,56 +87,36 @@ export class ShiftController {
             type: 'object',
             properties: {
               fare: {type: 'number'},
+              to: {type: 'string'},
             },
           },
         },
       },
     })
-    body?: {fare?: number},
+    body?: {fare?: number; to?: string},
   ): Promise<ShiftHistory> {
-    const shift = await this.shiftRepository.get(`shift:${id}`);
-    if (!shift) {
-      throw new HttpErrors.NotFound(`Shift with id ${id} not found.`);
-    }
-    if (shift.status !== 'ONTHEWAY') {
-      throw new HttpErrors.BadRequest(
-        `Shift ${id} cannot be completed (current status: ${shift.status}).`,
-      );
-    }
+    return this.shiftService.complete(id, body);
+  }
 
-    let driverName = 'Unknown';
-    let vehiclePlate: string | undefined;
-
-    if (shift.acceptedBy) {
-      const driver = await this.driverRepository.findById(shift.acceptedBy);
-      driverName = driver.name;
-      await this.driverRepository.updateById(driver.id, {status: 'AVAILABLE'});
-
-      if (driver.assignedVehicleId) {
-        const vehicle = await this.vehicleRepository.findById(
-          driver.assignedVehicleId,
-        );
-        vehiclePlate = vehicle.plate;
-        await this.vehicleRepository.updateById(vehicle.id, {
-          status: 'AVAILABLE',
-        });
-      }
-    }
-
-    const history = await this.shiftHistoryRepository.create({
-      clientName: shift.clientName,
-      from: shift.from,
-      to: shift.to ?? 'Destination',
-      startedAt: shift.date,
-      completedAt: new Date().toISOString(),
-      driverId: shift.acceptedBy,
-      driverName,
-      vehiclePlate,
-      fare: body?.fare ?? 20.0,
-      status: 'FINISHED',
-    });
-
-    await this.shiftRepository.delete(`shift:${id}`);
-    return history;
+  @get('/shifts/closest-taxi')
+  @response(200, {
+    description: 'Find closest available taxi in Jerez for a pickup location',
+    content: {
+      'application/json': {
+        schema: {
+          type: 'object',
+          properties: {
+            vehicle: getModelSchemaRef(Vehicle),
+            distanceKm: {type: 'number'},
+            estimatedArrivalMinutes: {type: 'number'},
+          },
+        },
+      },
+    },
+  })
+  async findClosestTaxi(
+    @param.query.string('address', {required: true}) address: string,
+  ): Promise<ClosestVehicleResult | null> {
+    return this.shiftService.suggestClosestVehicle(address);
   }
 }

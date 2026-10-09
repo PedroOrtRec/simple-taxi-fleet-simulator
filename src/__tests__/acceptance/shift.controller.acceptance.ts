@@ -165,4 +165,24 @@ describe('ShiftController (Acceptance - E2E Lifecycle)', () => {
   it('returns 404 for non-existent shift in Redis', async () => {
     await client.get('/shifts/999999999').expect(404);
   });
+
+  it('finds closest available taxi for a location in Jerez via GET /shifts/closest-taxi', async () => {
+    const vehicle = await vehicleRepo.create({
+      plate: '1122-JJJ',
+      licenseNumber: 'TX-JRZ-01',
+      status: 'AVAILABLE',
+      latitude: 36.6815,
+      longitude: -6.1383,
+    });
+
+    const res = await client
+      .get('/shifts/closest-taxi')
+      .query({address: 'Plaza del Arenal, Jerez de la Frontera'})
+      .expect(200);
+
+    expect(res.body).to.not.be.null();
+    expect(res.body.vehicle.id).to.equal(vehicle.id);
+    expect(res.body.distanceKm).to.be.within(0, 0.5);
+    expect(res.body.estimatedArrivalMinutes).to.be.greaterThanOrEqual(1);
+  });
 });

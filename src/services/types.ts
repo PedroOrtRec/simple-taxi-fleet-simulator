@@ -1,4 +1,4 @@
-import {Shift, Vehicle} from '../models';
+import {Vehicle} from '../models';
 
 export interface GeoPoint {
   latitude: number;
@@ -28,9 +28,7 @@ export interface CreateShiftRequest {
   to?: string;
 }
 
-export interface ShiftService {
-  request(data: CreateShiftRequest): Promise<Shift>;
-  getById(id: number): Promise<Shift>;
-  accept(id: number, driverId: number): Promise<Shift>;
-  complete(id: number, to?: string): Promise<Shift>;
+export interface CompleteShiftPayload {
+  fare?: number;
+  to?: string;
 }

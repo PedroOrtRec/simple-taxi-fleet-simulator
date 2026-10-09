@@ -9,8 +9,16 @@ import {RestApplication} from '@loopback/rest';
 import {ServiceMixin} from '@loopback/service-proxy';
 import path from 'path';
 import {MySequence} from './sequence';
-import {GeocoderBindings, FareCalculatorBindings} from './keys';
-import {GeocoderServiceProvider, FareCalculatorService} from './services';
+import {
+  GeocoderBindings,
+  FareCalculatorBindings,
+  ShiftServiceBindings,
+} from './keys';
+import {
+  GeocoderServiceProvider,
+  FareCalculatorService,
+  ShiftService,
+} from './services';
 
 export {ApplicationConfig};
 
@@ -41,6 +49,9 @@ export class SimpleTaxiFleetSimulatorApplication extends BootMixin(
     this.bind(FareCalculatorBindings.FARE_SERVICE).toClass(
       FareCalculatorService,
     );
+
+    // Bind Shift service using IoC BindingKey
+    this.bind(ShiftServiceBindings.SHIFT_SERVICE).toClass(ShiftService);
 
     this.projectRoot = __dirname;
     // Customize @loopback/boot Booter Conventions here
