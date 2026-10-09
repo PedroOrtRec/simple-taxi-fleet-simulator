@@ -66,8 +66,8 @@ Content-Type: application/json
   "plate": "5555-MAD",
   "licenseNumber": "TX-055",
   "status": "AVAILABLE",
-  "latitude": 404168,
-  "longitude": -37038
+  "latitude": 36.6815,
+  "longitude": -6.1383
 }
 
 ### 2.2 Listar Vehículos
@@ -87,6 +87,19 @@ Content-Type: application/json
 ### 3. Ciclo de Vida del Turno / Servicio (Redis + Postgres + MongoDB)
 ### ---------------------------------------------------------------------------
 
+### 3.0 Despacho Inteligente: Buscar Taxi Más Cercano en Jerez (OpenStreetMap + Haversine)
+# @name closestTaxiArenal
+GET {{baseUrl}}/shifts/closest-taxi?address=Plaza+del+Arenal,+Jerez+de+la+Frontera
+Accept: application/json
+
+### 3.0b Buscar Taxi Más Cercano: Estación de Tren de Jerez
+GET {{baseUrl}}/shifts/closest-taxi?address=Estación+de+Tren,+Jerez+de+la+Frontera
+Accept: application/json
+
+### 3.0c Buscar Taxi Más Cercano: Aeropuerto de Jerez
+GET {{baseUrl}}/shifts/closest-taxi?address=Aeropuerto+de+Jerez
+Accept: application/json
+
 ### 3.1 Solicitar Turno en Tiempo Real (Se guarda en Redis como PENDING)
 # @name createShift
 POST {{baseUrl}}/shifts
@@ -94,8 +107,8 @@ Content-Type: application/json
 
 {
   "clientName": "Pedro Ortega",
-  "from": "Puerta del Sol, Madrid",
-  "to": "Aeropuerto Adolfo Suárez Barajas T4"
+  "from": "Plaza del Arenal, Jerez de la Frontera",
+  "to": "Aeropuerto de Jerez"
 }
 
 ### 3.2 Consultar Estado Activo del Turno en Redis (Debe ser PENDING)

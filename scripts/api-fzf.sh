@@ -48,8 +48,8 @@ run_full_flow() {
   echo " Conductor ID: $DRIVER_ID"
   echo ""
 
-  echo "2. Creando Vehículo (PostgreSQL)..."
-  VEHICLE_RES=$($HTTP_CMD POST "$BASE_URL/vehicles" plate="9988-XYZ" licenseNumber="TX-MAD-01" status="AVAILABLE")
+  echo "2. Creando Vehículo en Jerez (PostgreSQL)..."
+  VEHICLE_RES=$($HTTP_CMD POST "$BASE_URL/vehicles" plate="9988-XYZ" licenseNumber="TX-JRZ-01" status="AVAILABLE" latitude:=36.6815 longitude:=-6.1383)
   echo "$VEHICLE_RES"
   VEHICLE_ID=$(echo "$VEHICLE_RES" | jq -r '.id // empty')
   echo " Vehículo ID: $VEHICLE_ID"
@@ -60,34 +60,38 @@ run_full_flow() {
   echo " Vehículo asignado con éxito."
   echo ""
 
-  echo "4. Solicitando Servicio de Taxi (Redis - PENDING)..."
-  SHIFT_RES=$($HTTP_CMD POST "$BASE_URL/shifts" clientName="Pedro Ortega" from="Puerta del Sol" to="Aeropuerto T4")
+  echo "4. Despacho Inteligente: Buscando Taxi más cercano en Jerez (OSM + Haversine)..."
+  $HTTP_CMD GET "$BASE_URL/shifts/closest-taxi" address=="Plaza del Arenal, Jerez de la Frontera"
+  echo ""
+
+  echo "5. Solicitando Servicio de Taxi (Redis - PENDING)..."
+  SHIFT_RES=$($HTTP_CMD POST "$BASE_URL/shifts" clientName="Pedro Ortega" from="Plaza del Arenal, Jerez de la Frontera" to="Aeropuerto de Jerez")
   echo "$SHIFT_RES"
   SHIFT_ID=$(echo "$SHIFT_RES" | jq -r '.id // empty')
   echo " Turno ID: $SHIFT_ID"
   echo ""
 
-  echo "5. Consultando Turno en Redis..."
+  echo "6. Consultando Turno en Redis..."
   $HTTP_CMD GET "$BASE_URL/shifts/$SHIFT_ID"
   echo ""
 
-  echo "6. Conductor Acepta Turno (Redis -> ONTHEWAY, PostgreSQL -> Flota BUSY)..."
+  echo "7. Conductor Acepta Turno (Redis -> ONTHEWAY, PostgreSQL -> Flota BUSY)..."
   $HTTP_CMD POST "$BASE_URL/shifts/$SHIFT_ID/accept" driverId:="$DRIVER_ID"
   echo ""
 
-  echo "7. Verificando estado BUSY en PostgreSQL..."
+  echo "8. Verificando estado BUSY en PostgreSQL..."
   $HTTP_CMD GET "$BASE_URL/drivers/$DRIVER_ID"
   echo ""
 
-  echo "8. Completando Turno (Mueve a MongoDB, libera PostgreSQL y borra de Redis)..."
+  echo "9. Completando Turno (Mueve a MongoDB, libera PostgreSQL y borra de Redis)..."
   $HTTP_CMD POST "$BASE_URL/shifts/$SHIFT_ID/complete" fare:=35.50
   echo ""
 
-  echo "9. Verificando que el Turno se borró de Redis (esperado 404)..."
+  echo "10. Verificando que el Turno se borró de Redis (esperado 404)..."
   $HTTP_CMD --ignore-stdin --check-status GET "$BASE_URL/shifts/$SHIFT_ID" || true
   echo ""
 
-  echo "10. Consultando Histórico en MongoDB..."
+  echo "11. Consultando Histórico en MongoDB..."
   $HTTP_CMD GET "$BASE_URL/shift-histories"
   echo ""
   echo "🎉 ¡Flujo completo ejecutado con éxito!"
@@ -111,9 +115,10 @@ while true; do
 12 | SHIFTS   | GET /shifts/:id      | Consultar estado activo en tiempo real (Redis)
 13 | SHIFTS   | POST /accept         | Conductor acepta turno (Redis ONTHEWAY + Postgres BUSY)
 14 | SHIFTS   | POST /complete       | Finalizar turno (MongoDB FINISHED + Libera Flota + Borra Redis)
-15 | HISTORY  | GET /shift-histories | Listar histórico de turnos archivados (MongoDB)
-16 | USERS    | GET /users           | Listar operadores (In-Memory DB)
-17 | USERS    | POST /users          | Registrar nuevo operador (In-Memory DB)
+15 | DISPATCH | GET /closest-taxi    | Buscar taxi más cercano en Jerez (OSM + Haversine)
+16 | HISTORY  | GET /shift-histories | Listar histórico de turnos archivados (MongoDB)
+17 | USERS    | GET /users           | Listar operadores (In-Memory DB)
+18 | USERS    | POST /users          | Registrar nuevo operador (In-Memory DB)
 0  | EXIT     | Salir                | Salir del selector
 EOF
 )
@@ -216,12 +221,17 @@ EOF
       fi
       ;;
     15)
-      $HTTP_CMD GET "$BASE_URL/shift-histories"
+      read -rp "Dirección de recogida en Jerez [Plaza del Arenal, Jerez de la Frontera]: " pickup_addr
+      pickup_addr="${pickup_addr:-Plaza del Arenal, Jerez de la Frontera}"
+      $HTTP_CMD GET "$BASE_URL/shifts/closest-taxi" address=="$pickup_addr"
       ;;
     16)
-      $HTTP_CMD GET "$BASE_URL/users"
+      $HTTP_CMD GET "$BASE_URL/shift-histories"
       ;;
     17)
+      $HTTP_CMD GET "$BASE_URL/users"
+      ;;
+    18)
       read -rp "Nombre del operador [Central]: " u_name
       u_name="${u_name:-Central}"
       read -rp "Email [admin@taxifleet.com]: " u_email

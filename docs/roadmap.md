@@ -12,20 +12,22 @@ Este documento define las fases progresivas de aprendizaje e implementación de 
 | **2. Fuentes de Datos & Docker** | DataSources, Connectors & Docker Compose | **Completado** | `docker-compose.yml` (PostgreSQL, Redis, MongoDB), conectores Memory (`db.json`), `postgresql`, `kv-redis` y `mongodb`. Auto-migración (`npm run migrate`). |
 | **3. Modelado y Repositorios** | Models, Repositories, Relations | **Completado** | Modelos `User`, `Driver`, `Vehicle`, `Shift`, `ShiftHistory`. Repositorios CRUD y KV. Pruebas de integración de persistencia. |
 | **4. Capa HTTP & OpenAPI** | Controllers, Routing, OpenAPI Spec | **Completado** | 5 controladores REST/RPC (`Driver`, `Vehicle`, `Shift`, `ShiftHistory`, `User`), acceptance tests E2E y herramientas de desarrollo TUI (`api-fzf.sh`, `api.http`). |
-| **5. Núcleo e Inversión de Control** | Context, Dependency Injection, Binding | **En curso** | Jerarquía de contextos (`ApplicationContext` vs `RequestContext`), `BindingKey`, `BindingScope`, y `Provider<T>` personalizados. |
-| **6. Lógica de Dominio y Servicios** | Services, External Proxies, Observers | **En curso** | Geocodificación para **Jerez de la Frontera** (OpenStreetMap Nominatim), cálculo de tarifas/Haversine, `ShiftService` y `LifeCycleObserver` (seeding). |
+| **5. Núcleo e Inversión de Control** | Context, Dependency Injection, Binding | **Completado** | Jerarquía de contextos (`ApplicationContext` vs `RequestContext`), `BindingKey`, `BindingScope`, y `Provider<T>` personalizados. |
+| **6. Lógica de Dominio y Servicios** | Services, External Proxies, Observers | **Completado** | Geocodificación para **Jerez de la Frontera** (OpenStreetMap Nominatim), cálculo de tarifas/Haversine, `ShiftService` y `LifeCycleObserver` (seeding y diagnóstico al apagar). |
 | **7. Pipeline y Ciclo de Petición** | Sequence, Middleware, Interceptors | Pendiente | Secuencia personalizada, interceptores globales y de método (`@intercept`), métricas de latencia y auditoría. |
 | **8. Seguridad y Acceso** | Authentication, Authorization | Pendiente | Extensión `@loopback/authentication`, tokens JWT, roles (`admin`, `dispatcher`, `driver`) y guards. |
 | **9. Testing y Calidad** | Testing, Booter, CI/CD | Continuo | Suite automatizada de tests unitarios, integración y aceptación con `@loopback/testlab`. |
 
 ---
 
-## Detalle de Fases Completadas (Fases 1 a 4)
+## Detalle de Fases Completadas (Fases 1 a 6)
 
 - **Fase 1: Fundaciones**: Inicialización con TypeScript en modo estricto, configuración de ESLint/Prettier, estructura de carpetas y scripts de ejecución.
 - **Fase 2: Infraestructura Políglota**: Orquestación de contenedores Docker (PostgreSQL 16, Redis 7, MongoDB 7) y archivo local embebido (`data/db.json`). Configuración de `DbDataSource`, `PostgresDataSource`, `RedisDataSource` y `MongodbDataSource`. Script de auto-migración `src/migrate.ts`.
 - **Fase 3: Modelado de Dominio y Repositorios**: Entidades de negocio (`Driver`, `Vehicle`, `Shift`, `ShiftHistory`, `User`) y sus respectivos repositorios (`DriverRepository`, `VehicleRepository`, `ShiftRepository`, `ShiftHistoryRepository`, `UserRepository`). Tests de integración validando operaciones contra bases de datos reales.
 - **Fase 4: Controladores HTTP y Testing E2E**: Controladores REST para activos y usuarios, y controlador de máquina de estados para turnos en tiempo real (`ShiftController`). Pruebas de aceptación con `supertest` y `@loopback/testlab`. Entorno interactivo con Zellij, Kulala (`api.http`) y FZF (`api-fzf.sh`).
+- **Fase 5: Núcleo e Inversión de Control**: Centralización de constantes de inyección tipadas (`BindingKey<T>`) en `src/keys.ts` (`GeocoderBindings`, `FareCalculatorBindings`, `ShiftServiceBindings`). Configuración de proveedores y scopes en el contenedor IoC de la aplicación.
+- **Fase 6: Lógica de Dominio, Servicios y LifeCycle Observers**: DataSource REST e integración de OpenStreetMap Nominatim adaptada a Jerez de la Frontera. Servicio de tarifas y despacho (`FareCalculatorService`, Haversine). Orquestación políglota desacoplada en `ShiftService` y endpoint `GET /shifts/closest-taxi`. Observador del ciclo de vida (`DatabaseSeedObserver`) para sembrado inicial idempotente y diagnóstico de flota en el apagado (`stop()`).
 
 ---
 
@@ -35,13 +37,13 @@ A continuación se detalla el plan de acción ordenado para implementar de forma
 
 | Paso | Objetivo | Componente / Archivos | Estado |
 | :---: | :--- | :--- | :---: |
-| **1** | Conectar API externa de OpenStreetMap Nominatim | `loopback-connector-rest`, `src/datasources/geocoder.datasource.ts` | **En curso** |
-| **2** | Inversión de Control: BindingKeys tipados | `src/keys.ts` (`GeocoderBindings`, `FareCalculatorBindings`, `ShiftServiceBindings`) | Pendiente |
-| **3** | Servicio de Geocodificación y Provider Proxy | `src/services/geocoder.service.ts` (`@loopback/service-proxy`, interfaces de Jerez) | Pendiente |
-| **4** | Cálculo de Tarifas y Despacho Inteligente | `src/services/fare-calculator.service.ts` (Fórmula Haversine, tarifas Jerez) | Pendiente |
-| **5** | Orquestación de Negocio y Thin Controller | `src/services/shift.service.ts` y refactorización de `src/controllers/shift.controller.ts` | Pendiente |
-| **6** | LifeCycleObserver de Arranque y Seeding | `src/observers/database-seed.observer.ts` (Sembrado de paradas de Jerez y operadores) | Pendiente |
-| **7** | Validación Integral y Pruebas E2E | Tests de integración/unitarios y pruebas interactivas en `api.http` | Pendiente |
+| **1** | Conectar API externa de OpenStreetMap Nominatim | `loopback-connector-rest`, `src/datasources/geocoder.datasource.ts` | **Completado** |
+| **2** | Inversión de Control: BindingKeys tipados | `src/keys.ts` (`GeocoderBindings`, `FareCalculatorBindings`, `ShiftServiceBindings`) | **Completado** |
+| **3** | Servicio de Geocodificación y Provider Proxy | `src/services/geocoder.service.ts` (`@loopback/service-proxy`, interfaces de Jerez) | **Completado** |
+| **4** | Cálculo de Tarifas y Despacho Inteligente | `src/services/fare-calculator.service.ts` (Fórmula Haversine, tarifas Jerez) | **Completado** |
+| **5** | Orquestación de Negocio y Thin Controller | `src/services/shift.service.ts` y refactorización de `src/controllers/shift.controller.ts` | **Completado** |
+| **6** | LifeCycleObserver de Arranque y Seeding | `src/observers/database-seed.observer.ts` (Sembrado de paradas de Jerez y diagnóstico `stop()`) | **Completado** |
+| **7** | Validación Integral y Herramientas TUI/HTTP | Tests de integración/unitarios/E2E, `api.http` y selector TUI `scripts/api-fzf.sh` | **Completado** |
 
 ---
 
